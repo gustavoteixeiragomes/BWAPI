@@ -11,13 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\ExampleAIClient.cpp" />
+    <ClCompile Include="Source\SimpleMoveAIClient.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{AE3B9DC4-5FBB-4B57-8AB4-0D84D8649D78}</ProjectGuid>
+    <ProjectGuid>{3B0AF191-DA57-4AED-B9C5-629D97BF2516}</ProjectGuid>
     <RootNamespace>ExampleAIClient</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>ExampleAIClient</ProjectName>
+    <ProjectName>SimpleMoveAIClient</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">

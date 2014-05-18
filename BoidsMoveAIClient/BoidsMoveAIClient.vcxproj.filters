@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\ExampleAIClient.cpp">
+    <ClCompile Include="Source\BoidsMoveAIClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

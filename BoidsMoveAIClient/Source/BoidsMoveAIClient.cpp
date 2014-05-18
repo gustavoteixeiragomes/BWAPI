@@ -18,7 +18,6 @@ bool show_bullets;
 bool show_visibility_data;
 
 Unitset units    = NULL;
-Unitset flags    = NULL;
 Position nullPosition = NULL;
 PositionOrUnit flag1 = nullPosition;
 PositionOrUnit flag2 = nullPosition;
@@ -72,29 +71,27 @@ int main(int argc, const char* argv[])
     else
     {
       Broodwar << "The match up is " << Broodwar->self()->getRace() << " vs " << Broodwar->enemy()->getRace() << std::endl;
-	  units    = Broodwar->self()->getUnits();
-      for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	  Unitset allUnits    = Broodwar->self()->getUnits();
+      for ( Unitset::iterator i = allUnits.begin(); i != allUnits.end(); ++i )
       {
 		  if ( i->getType().isPowerup() )
 		  {
 			  if (!flag1.isUnit())
 			  {
 				  flag1 = (*i);
-				  flags.insert((*i));
 				  //Broodwar << "Flag 1 X - " << flag1.getPosition().x << " F1 Y - " << flag1.getPosition().y << std::endl;
 			  }
 			  else if (!flag2.isUnit())
 			  {
 				  flag2 = (*i);
-				  flags.insert((*i));
 				  //Broodwar << "Flag 2 X - " << flag2.getPosition().x << " F2 Y - " << flag2.getPosition().y << std::endl;
 			  }
 		  }
+		  else if ( i->getType() == BWAPI::UnitTypes::Terran_Marine )
+		  {
+			  units.insert((*i));
+		  }
       }
-	  for ( Unitset::iterator i = flags.begin(); i != flags.end(); ++i )
-      {
-		  std::cout << i->getType().c_str() << std::endl;
-	  }
     }
     while(Broodwar->isInGame())
     {
