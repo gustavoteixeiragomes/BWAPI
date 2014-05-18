@@ -1,0 +1,3 @@
+[2014/04/13 - 21:52:48] Injection failed.
+This is caused when BWAPI crashes before injecting completely. - 00000000: The operation completed successfully.
+
