@@ -21,7 +21,13 @@ Unitset units    = NULL;
 Position nullPosition = NULL;
 PositionOrUnit flag1 = nullPosition;
 PositionOrUnit flag2 = nullPosition;
-void patrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2, bool shiftQueueCommand);
+Position flagPosition = 0;
+void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2);
+
+Position rule1(Unitset units, int unitID);
+Position rule2(Unitset units, int unitID);
+Position rule3(Unitset units, int unitID);
+Position rule4(Position unitPosition, Position place);
 
 void reconnect()
 {
@@ -204,7 +210,7 @@ int main(int argc, const char* argv[])
       //drawStats();
       //Broodwar->drawTextScreen(300,0,"FPS: %f",Broodwar->getAverageFPS());
 
-	  patrolFlag(units, flag1, flag2, false);
+	  boidsPatrolFlag(units, flag1, flag2);
 
       BWAPI::BWAPIClient.update();
       if (!BWAPI::BWAPIClient.isConnected())
@@ -225,21 +231,6 @@ void drawStats()
   int line = 0;
   for ( UnitType::set::iterator i = UnitTypes::allUnitTypes().begin(); i != UnitTypes::allUnitTypes().end(); ++i )
   {
-	  /*
-		Interest functions in unit.h
-		isPatrolling()
-		isStuck()
-		attack(PositionOrUnit target, bool shiftQueueCommand = false);
-		patrol()
-		move()
-		functions "can"
-		canMoveGrouped
-		canPatrolGrouped
-
-		isPowerup ()
-		isFlagBeacon ()
-	  const UnitType BWAPI::UnitTypes::Terran_Marine
-	  */
     int count = Broodwar->self()->allUnitCount(*i);
     if ( count )
     {
@@ -248,7 +239,7 @@ void drawStats()
 			Broodwar->drawTextScreen(5, 26*line, "P - %d %s%c", count, (*i).c_str(), count == 1 ? ' ' : 's');
 			++line;
 		}
-		if ( (*i) == BWAPI::UnitTypes::Terran_Marine )
+		else if ( (*i) == BWAPI::UnitTypes::Terran_Marine )
 		{
 			Broodwar->drawTextScreen(5, 26*line, "T - %d %s%c", count, (*i).c_str(), count == 1 ? ' ' : 's');
 			++line;
@@ -302,35 +293,163 @@ void showForces()
   }
 }
 
-void patrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2, bool shiftQueueCommand )
+void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2 )
 {
-	Unit closestFlag = NULL;
-	if ( flag1.isUnit() && flag2.isUnit() )
+	Position v1, v2, v3, v4, newPosition, unitVelocity;
+	Position distance1 = units.getPosition() - flag1.getPosition();
+	Position distance2 = units.getPosition() - flag2.getPosition();
+	//Position flagPosition = 0;
+
+	int line = 0;
+	/*
+	Broodwar->drawTextScreen(5, 10*line, "P - %d : %d", units.getPosition().x, units.getPosition().y);
+	line++;
+	Broodwar->drawTextScreen(5, 10*line, "P - %d : %d", distance1.x, distance1.y);
+	line++;
+	Broodwar->drawTextScreen(5, 10*line, "P - %d : %d", distance2.x, distance2.y);
+	line++;
+	*/
+	if ( units.getPosition().getDistance(flag1.getPosition()) < 50 )
 	{
-		for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+		flagPosition = flag2.getPosition();
+		Broodwar->drawTextScreen(5, 10*line, "Flag 2");
+		line++;
+	}
+	else if ( units.getPosition().getDistance(flag2.getPosition()) < 50 )
+	{
+		flagPosition = flag1.getPosition();
+		Broodwar->drawTextScreen(5, 10*line, "Flag 1");
+		line++;
+	}
+	else if ( flagPosition.x == 0 && flagPosition.y == 0 )
+	{
+		if ( units.getPosition().getDistance(flag1.getPosition()) <  units.getPosition().getDistance(flag2.getPosition()) )
 		{
-			if ( i->getType() == BWAPI::UnitTypes::Terran_Marine )
+			flagPosition = flag1.getPosition();
+			Broodwar->drawTextScreen(5, 10*line, "Flag 1 B");
+			line++;
+		}
+		else
+		{
+			flagPosition = flag2.getPosition();
+			Broodwar->drawTextScreen(5, 10*line, "Flag 2 B");
+			line++;
+		}
+	}
+
+	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	{
+		v1 = rule1( units, i->getID() );
+		v2 = rule2( units, i->getID() );
+		v3 = rule3( units, i->getID() );
+		
+		Broodwar->drawTextScreen(5, 10*line, "Flag 1: %d | Flag2: %d | P: %d", i->getDistance(flag1), i->getDistance(flag2), flagPosition.x);
+		line++;
+		
+		v4 = rule4( i->getPosition(), flagPosition );
+		//Broodwar->drawTextScreen(5, 10*line, "FP - %d : %d", v4.x, v4.y);
+		//line++;
+		//flagPosition = flag1.getPosition();
+		//v4 = rule4( i->getPosition(), flagPosition );
+		
+		/*
+		Broodwar->drawTextScreen(5, 10*line, "v1 - %d : %d", v1.x, v1.y);
+		line++;
+		Broodwar->drawTextScreen(5, 10*line, "v2 - %d : %d", v2.x, v2.y);
+		line++;
+		Broodwar->drawTextScreen(5, 10*line, "v3 - %d : %d", v3.x, v3.y);
+		line++;
+		*/
+		Broodwar->drawTextScreen(5, 10*line, "v4 - %d : %d", v4.x, v4.y);
+		line++;
+		/*
+		line -= 4;
+		*/
+
+		unitVelocity.x = (int)ceil(i->getVelocityX());
+		unitVelocity.y = (int)ceil(i->getVelocityY());	
+		unitVelocity = unitVelocity + ( v1*2 ) + ( v2*1 ) + (v3*2 ) + ( v4*4 );
+		newPosition = i->getPosition() + unitVelocity;
+		
+		i->move(newPosition);
+	}
+}
+
+// Rule 1: Boids try to fly towards the centre of mass of neighbouring boids.
+Position rule1(Unitset units, int unitID)
+{
+	Position v1 = 0;
+	Position unitPosition = 0;
+	int total = units.size() - 1;
+	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	{
+		if ( unitID == i->getID() )
+		{
+			unitPosition = i->getPosition();
+		}
+		else
+		{
+			v1 += ( i->getPosition() / total );
+		}
+	}
+	v1 = ( ( v1 - unitPosition ) / 10 );
+	return v1;
+}
+
+// Rule 2: Boids try to keep a small distance away from other objects (including other boids).
+Position rule2(Unitset units, int unitID)
+{
+	Position v2 = 0;
+	Position unitPosition = 0;
+
+	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	{
+		if ( unitID == i->getID() )
+		{
+			unitPosition = i->getPosition();
+		}
+	}
+	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	{
+		if ( unitID != i->getID() )
+		{ 
+			if ( i->getPosition().getDistance(unitPosition) < 40 )
 			{
-				if ( i->getDistance(flag1) < 30 )
-				{
-					i->rightClick(flag2, shiftQueueCommand);
-				}
-				else if ( i->getDistance(flag2) < 30 )
-				{
-					i->rightClick(flag1, shiftQueueCommand);
-				}
-				else if ( i->isIdle() )
-				{
-					if ( i->getDistance(flag1) < i->getDistance(flag2) )
-					{
-						i->rightClick(flag1, shiftQueueCommand);
-					}
-					else
-					{
-						i->rightClick(flag2, shiftQueueCommand);
-					}
-				}
+				v2 -= ( i->getPosition() - unitPosition );
 			}
 		}
 	}
+
+	return v2;
+}
+
+// Rule 3: Boids try to match velocity with near boids.
+Position rule3(Unitset units, int unitID)
+{
+	Position v3 = 0;
+	Position unitVelocity = 0;
+	int total = units.size() - 1;
+	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	{
+		if ( unitID == i->getID() )
+		{
+			unitVelocity.x = (int)ceil( i->getVelocityX() );
+			unitVelocity.y = (int)ceil( i->getVelocityY() );
+		}
+		else
+		{
+			v3.x += ( (int)ceil( i->getVelocityX() ) / total );
+			v3.y += ( (int)ceil( i->getVelocityY() ) / total );
+		}
+	}
+	v3 = ( ( v3 - unitVelocity ) / 8 );
+	return v3;
+}
+
+// Rule 4: Tendency towards a particular place
+Position rule4(Position unitPosition, Position place)
+{
+	Position v4 = 0;
+	v4 = ( ( place - unitPosition ) / 10 );
+	return v4;
 }
