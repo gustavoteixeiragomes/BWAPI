@@ -12,22 +12,21 @@ using namespace BWAPI;
 void drawStats();
 void drawBullets();
 void drawVisibilityData();
-void showPlayers();
-void showForces();
 bool show_bullets;
 bool show_visibility_data;
 
-Unitset units    = NULL;
-Position nullPosition = NULL;
-PositionOrUnit flag1 = nullPosition;
-PositionOrUnit flag2 = nullPosition;
-Position flagPosition = 0;
+Unitset marines, firebat, medic, scv;
+
+Position nullPosition, flagMarines, flagFirebat, flagMedic, flagScv;
+PositionOrUnit flag1, flag2, flag3, flag4;
+
 void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2);
 
 Position rule1(Unitset units, int unitID);
 Position rule2(Unitset units, int unitID);
 Position rule3(Unitset units, int unitID);
 Position rule4(Position unitPosition, Position place);
+Position rule5(Unit unit1);
 
 void reconnect()
 {
@@ -63,6 +62,21 @@ int main(int argc, const char* argv[])
    
     show_bullets=false;
     show_visibility_data=false;
+	
+	marines = NULL;
+	firebat = NULL;
+	medic = NULL;
+	scv = NULL;
+
+	nullPosition = NULL;
+	flag1 = nullPosition;
+	flag2 = nullPosition;
+	flag3 = nullPosition;
+	flag4 = nullPosition;
+	flagMarines = nullPosition;
+	flagFirebat = nullPosition;
+	flagMedic = nullPosition;
+	flagScv = nullPosition;
 
     if (Broodwar->isReplay())
     {
@@ -78,24 +92,43 @@ int main(int argc, const char* argv[])
     {
       Broodwar << "The match up is " << Broodwar->self()->getRace() << " vs " << Broodwar->enemy()->getRace() << std::endl;
 	  Unitset allUnits    = Broodwar->self()->getUnits();
-      for ( Unitset::iterator i = allUnits.begin(); i != allUnits.end(); ++i )
+	  
+	  for ( Unitset::iterator i = allUnits.begin(); i != allUnits.end(); ++i )
       {
 		  if ( i->getType().isPowerup() )
 		  {
 			  if (!flag1.isUnit())
 			  {
 				  flag1 = (*i);
-				  //Broodwar << "Flag 1 X - " << flag1.getPosition().x << " F1 Y - " << flag1.getPosition().y << std::endl;
 			  }
 			  else if (!flag2.isUnit())
 			  {
 				  flag2 = (*i);
-				  //Broodwar << "Flag 2 X - " << flag2.getPosition().x << " F2 Y - " << flag2.getPosition().y << std::endl;
+			  }
+			  else if (!flag3.isUnit())
+			  {
+				  flag3 = (*i);
+			  }
+			  else if (!flag4.isUnit())
+			  {
+				  flag4 = (*i);
 			  }
 		  }
 		  else if ( i->getType() == BWAPI::UnitTypes::Terran_Marine )
 		  {
-			  units.insert((*i));
+			  marines.insert((*i));
+		  }
+		  else if ( i->getType() == BWAPI::UnitTypes::Terran_Firebat )
+		  {
+			  firebat.insert((*i));
+		  }
+		  else if ( i->getType() == BWAPI::UnitTypes::Terran_Medic )
+		  {
+			  medic.insert((*i));
+		  }
+		  else if ( i->getType() == BWAPI::UnitTypes::Terran_SCV )
+		  {
+			  scv.insert((*i));
 		  }
       }
     }
@@ -111,93 +144,6 @@ int main(int argc, const char* argv[])
             else
               Broodwar << "I lost the game" << std::endl;
             break;
-          case EventType::SendText:
-            if (e->getText()=="/show bullets")
-            {
-              show_bullets=!show_bullets;
-            } else if (e->getText()=="/show players")
-            {
-              showPlayers();
-            } else if (e->getText()=="/show forces")
-            {
-              showForces();
-            } else if (e->getText()=="/show visibility")
-            {
-              show_visibility_data=!show_visibility_data;
-            } 
-            else
-            {
-              Broodwar << "You typed \"" << e->getText() << "\"!" << std::endl;
-            }
-            break;
-          case EventType::ReceiveText:
-            Broodwar << e->getPlayer()->getName() << " said \"" << e->getText() << "\"" << std::endl;
-            break;
-          case EventType::PlayerLeft:
-            Broodwar << e->getPlayer()->getName() << " left the game." << std::endl;
-            break;
-          case EventType::NukeDetect:
-            if (e->getPosition()!=Positions::Unknown)
-            {
-              Broodwar->drawCircleMap(e->getPosition(), 40, Colors::Red, true);
-              Broodwar << "Nuclear Launch Detected at " << e->getPosition() << std::endl;
-            }
-            else
-              Broodwar << "Nuclear Launch Detected" << std::endl;
-            break;
-          case EventType::UnitCreate:
-            if (!Broodwar->isReplay())
-			{
-              //Broodwar << "A " << e->getUnit()->getType() << " [" << e->getUnit() << "] has been created at " << e->getUnit()->getPosition() << std::endl;
-			}
-			else
-            {
-              // if we are in a replay, then we will print out the build order
-              // (just of the buildings, not the units).
-              if (e->getUnit()->getType().isBuilding() && e->getUnit()->getPlayer()->isNeutral()==false)
-              {
-                int seconds=Broodwar->getFrameCount()/24;
-                int minutes=seconds/60;
-                seconds%=60;
-                Broodwar->sendText("%.2d:%.2d: %s creates a %s", minutes, seconds, e->getUnit()->getPlayer()->getName().c_str(), e->getUnit()->getType().c_str());
-              }
-            }
-            break;
-          case EventType::UnitDestroy:
-            if (!Broodwar->isReplay())
-              Broodwar->sendText("A %s [%x] has been destroyed at (%d,%d)",e->getUnit()->getType().c_str(), e->getUnit(), e->getUnit()->getPosition().x, e->getUnit()->getPosition().y);
-            break;
-          case EventType::UnitMorph:
-            if (!Broodwar->isReplay())
-              Broodwar->sendText("A %s [%x] has been morphed at (%d,%d)",e->getUnit()->getType().c_str(), e->getUnit(), e->getUnit()->getPosition().x, e->getUnit()->getPosition().y);
-            else
-            {
-              // if we are in a replay, then we will print out the build order
-              // (just of the buildings, not the units).
-              if (e->getUnit()->getType().isBuilding() && e->getUnit()->getPlayer()->isNeutral()==false)
-              {
-                int seconds=Broodwar->getFrameCount()/24;
-                int minutes=seconds/60;
-                seconds%=60;
-                Broodwar->sendText("%.2d:%.2d: %s morphs a %s" ,minutes, seconds, e->getUnit()->getPlayer()->getName().c_str(), e->getUnit()->getType().c_str());
-              }
-            }
-            break;
-          case EventType::UnitShow:
-            if (!Broodwar->isReplay())
-              Broodwar->sendText("A %s [%x] has been spotted at (%d,%d)", e->getUnit()->getType().c_str(), e->getUnit(), e->getUnit()->getPosition().x, e->getUnit()->getPosition().y);
-            break;
-          case EventType::UnitHide:
-            if (!Broodwar->isReplay())
-              Broodwar->sendText("A %s [%x] was last seen at (%d,%d)", e->getUnit()->getType().c_str(), e->getUnit(), e->getUnit()->getPosition().x, e->getUnit()->getPosition().y);
-            break;
-          case EventType::UnitRenegade:
-            if (!Broodwar->isReplay())
-              Broodwar->sendText("A %s [%x] is now owned by %s", e->getUnit()->getType().c_str(), e->getUnit(), e->getUnit()->getPlayer()->getName().c_str());
-            break;
-          case EventType::SaveGame:
-            Broodwar->sendText("The game was saved to \"%s\".", e->getText().c_str());
-            break;
         }
       }
 
@@ -210,7 +156,10 @@ int main(int argc, const char* argv[])
       //drawStats();
       //Broodwar->drawTextScreen(300,0,"FPS: %f",Broodwar->getAverageFPS());
 
-	  boidsPatrolFlag(units, flag1, flag2);
+	  boidsPatrolFlag(marines, flag3, flag2);
+	  boidsPatrolFlag(firebat, flag4, flag1);
+	  boidsPatrolFlag(medic, flag2, flag3);
+	  boidsPatrolFlag(scv, flag1, flag4);
 
       BWAPI::BWAPIClient.update();
       if (!BWAPI::BWAPIClient.isConnected())
@@ -274,104 +223,90 @@ void drawVisibilityData()
     }
 }
 
-void showPlayers()
+void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2)
 {
-  Playerset players = Broodwar->getPlayers();
-  for(Playerset::iterator i = players.begin(); i != players.end(); ++i)
-    Broodwar << "Player [" << i->getID() << "]: " << i->getName() << " is in force: " << i->getForce()->getName() << std::endl;
-}
-
-void showForces()
-{
-  Forceset forces=Broodwar->getForces();
-  for(Forceset::iterator i = forces.begin(); i != forces.end(); ++i)
-  {
-    Playerset players = i->getPlayers();
-    Broodwar << "Force " << i->getName() << " has the following players:" << std::endl;
-    for(Playerset::iterator j = players.begin(); j != players.end(); ++j)
-      Broodwar << "  - Player [" << j->getID() << "]: " << j->getName() << std::endl;
-  }
-}
-
-void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2 )
-{
-	Position v1, v2, v3, v4, newPosition, unitVelocity;
-	Position distance1 = units.getPosition() - flag1.getPosition();
-	Position distance2 = units.getPosition() - flag2.getPosition();
-	//Position flagPosition = 0;
-
-	int line = 0;
-	/*
-	Broodwar->drawTextScreen(5, 10*line, "P - %d : %d", units.getPosition().x, units.getPosition().y);
-	line++;
-	Broodwar->drawTextScreen(5, 10*line, "P - %d : %d", distance1.x, distance1.y);
-	line++;
-	Broodwar->drawTextScreen(5, 10*line, "P - %d : %d", distance2.x, distance2.y);
-	line++;
-	*/
-	if ( units.getPosition().getDistance(flag1.getPosition()) < 50 )
+	if ( units.size()>0 )
 	{
-		flagPosition = flag2.getPosition();
-		Broodwar->drawTextScreen(5, 10*line, "Flag 2");
-		line++;
-	}
-	else if ( units.getPosition().getDistance(flag2.getPosition()) < 50 )
-	{
-		flagPosition = flag1.getPosition();
-		Broodwar->drawTextScreen(5, 10*line, "Flag 1");
-		line++;
-	}
-	else if ( flagPosition.x == 0 && flagPosition.y == 0 )
-	{
-		if ( units.getPosition().getDistance(flag1.getPosition()) <  units.getPosition().getDistance(flag2.getPosition()) )
+		Position v1, v2, v3, v4, v5, newPosition, unitVelocity, flagPosition;
+		Position distance1 = units.getPosition() - flag1.getPosition();
+		Position distance2 = units.getPosition() - flag2.getPosition();
+
+		if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Marine )
 		{
-			flagPosition = flag1.getPosition();
-			Broodwar->drawTextScreen(5, 10*line, "Flag 1 B");
-			line++;
+			flagPosition = flagMarines;
 		}
-		else
+		else if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Firebat )
+		{
+			flagPosition = flagFirebat;
+		}
+		else if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Medic )
+		{
+			flagPosition = flagMedic;
+		}
+		else if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_SCV )
+		{
+			flagPosition = flagScv;
+		}
+
+		if ( units.getPosition().getDistance(flag1.getPosition()) < 50 )
 		{
 			flagPosition = flag2.getPosition();
-			Broodwar->drawTextScreen(5, 10*line, "Flag 2 B");
-			line++;
 		}
-	}
+		else if ( units.getPosition().getDistance(flag2.getPosition()) < 50 )
+		{
+			flagPosition = flag1.getPosition();
+		}
+		else if ( flagPosition.x == 0 && flagPosition.y == 0 )
+		{
+			if ( units.getPosition().getDistance(flag1.getPosition()) <  units.getPosition().getDistance(flag2.getPosition()) )
+			{
+				flagPosition = flag1.getPosition();
+			}
+			else
+			{
+				flagPosition = flag2.getPosition();
+			}
+		}
 
-	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
-	{
-		v1 = rule1( units, i->getID() );
-		v2 = rule2( units, i->getID() );
-		v3 = rule3( units, i->getID() );
+		for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+		{
+			// Rule 1: Boids try to fly towards the centre of mass of neighbouring boids.
+			v1 = rule1( units, i->getID() );
+			// Rule 2: Boids try to keep a small distance away from other objects (including other boids).
+			v2 = rule2( units, i->getID() );
+			// Rule 3: Boids try to match velocity with near boids.
+			v3 = rule3( units, i->getID() );
 		
-		Broodwar->drawTextScreen(5, 10*line, "Flag 1: %d | Flag2: %d | P: %d", i->getDistance(flag1), i->getDistance(flag2), flagPosition.x);
-		line++;
+			// Rule 4: Tendency towards a particular place
+			v4 = rule4( i->getPosition(), flagPosition );
+			// Rule 5: Tendency to avoid another units
+			v5 = rule5( (*i) );
 		
-		v4 = rule4( i->getPosition(), flagPosition );
-		//Broodwar->drawTextScreen(5, 10*line, "FP - %d : %d", v4.x, v4.y);
-		//line++;
-		//flagPosition = flag1.getPosition();
-		//v4 = rule4( i->getPosition(), flagPosition );
+			unitVelocity.x = (int)ceil(i->getVelocityX());
+			unitVelocity.y = (int)ceil(i->getVelocityY());
+			unitVelocity = unitVelocity + ( v1*6 ) + ( v2*1 ) + (v3*1 ) + ( v4*5 ) + ( v5*2 );
+			newPosition = i->getPosition() + unitVelocity;
 		
-		/*
-		Broodwar->drawTextScreen(5, 10*line, "v1 - %d : %d", v1.x, v1.y);
-		line++;
-		Broodwar->drawTextScreen(5, 10*line, "v2 - %d : %d", v2.x, v2.y);
-		line++;
-		Broodwar->drawTextScreen(5, 10*line, "v3 - %d : %d", v3.x, v3.y);
-		line++;
-		*/
-		Broodwar->drawTextScreen(5, 10*line, "v4 - %d : %d", v4.x, v4.y);
-		line++;
-		/*
-		line -= 4;
-		*/
+			i->rightClick(newPosition);
+			Broodwar->drawDotMap(newPosition.x, newPosition.y, Colors::Blue);
+		}
 
-		unitVelocity.x = (int)ceil(i->getVelocityX());
-		unitVelocity.y = (int)ceil(i->getVelocityY());	
-		unitVelocity = unitVelocity + ( v1*2 ) + ( v2*1 ) + (v3*2 ) + ( v4*4 );
-		newPosition = i->getPosition() + unitVelocity;
-		
-		i->move(newPosition);
+		if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Marine )
+		{
+			flagMarines = flagPosition;
+		}
+		else if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Firebat )
+		{
+			flagFirebat = flagPosition;
+		}
+		else if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Medic )
+		{
+			flagMedic = flagPosition;
+		}
+		else if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_SCV )
+		{
+			flagScv = flagPosition;
+		}
 	}
 }
 
@@ -452,4 +387,25 @@ Position rule4(Position unitPosition, Position place)
 	Position v4 = 0;
 	v4 = ( ( place - unitPosition ) / 10 );
 	return v4;
+}
+
+// Rule 5: Tendency to avoid another units
+Position rule5(Unit unit1)
+{
+	Position v5 = 0;
+	Position unitPosition = unit1->getPosition();
+	Position unitDistance = 0;
+	Position totalDistance = 0;
+
+	Unitset avoidUnits = unit1->getUnitsInRadius(140, !BWAPI::Filter::IsPowerup && BWAPI::Filter::IsOwned);
+	for ( Unitset::iterator i = avoidUnits.begin(); i != avoidUnits.end(); ++i )
+	{
+		if ( unit1->getType() != i->getType() )
+		{
+			totalDistance += ( unitPosition - i->getPosition() );
+		}
+	}
+	v5.x = ( ( totalDistance.y ) / 10 );
+	v5.y = ( ( totalDistance.x ) / 10 );
+	return v5;
 }
