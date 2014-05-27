@@ -26,7 +26,10 @@ Position rule1(Unitset units, int unitID);
 Position rule2(Unitset units, int unitID);
 Position rule3(Unitset units, int unitID);
 Position rule4(Position unitPosition, Position place);
-Position rule5(Unit unit1);
+Position rule5(Unit unit1, Position place);
+
+// Stats
+long int distanceMarines, distanceFirebat, distanceMedic, distanceScv;
 
 void reconnect()
 {
@@ -77,16 +80,52 @@ int main(int argc, const char* argv[])
 	flagFirebat = nullPosition;
 	flagMedic = nullPosition;
 	flagScv = nullPosition;
-
-    if (Broodwar->isReplay())
+	
+	// Stats
+	distanceMarines = 0;
+	distanceFirebat = 0;
+	distanceMedic = 0;
+	distanceScv = 0;
+	
+	if (Broodwar->isReplay())
     {
-      Broodwar << "The following players are in this replay:" << std::endl;;
-      Playerset players = Broodwar->getPlayers();
-      for(Playerset::iterator p = players.begin(); p != players.end(); ++p )
-      {
-        if ( !p->getUnits().empty() && !p->isNeutral() )
-          Broodwar << p->getName() << ", playing as " << p->getRace() << std::endl;
-      }
+		Broodwar << "The following players are in this replay:" << std::endl;;
+		Playerset players = Broodwar->getPlayers();
+		for(Playerset::iterator p = players.begin(); p != players.end(); ++p )
+		{
+			if ( !p->getUnits().empty() && !p->isNeutral() )
+				Broodwar << p->getName() << ", playing as " << p->getRace() << std::endl;
+		}
+
+	
+		// Save distance
+		/*
+		Unitset allUnits = Broodwar->self()->getUnits();
+		for ( Unitset::iterator i = allUnits.begin(); i != allUnits.end(); ++i )
+		{
+			if ( !i->getType().isPowerup() )
+			{
+				if ( i->getType() == BWAPI::UnitTypes::Terran_Marine )
+				{
+					distanceMarines += i->getDistance(nullPosition);
+				}
+				else if ( i->getType() == BWAPI::UnitTypes::Terran_Firebat )
+				{
+					distanceFirebat += i->getDistance(nullPosition);
+				}
+				else if ( i->getType() == BWAPI::UnitTypes::Terran_Medic )
+				{
+					distanceMedic += i->getDistance(nullPosition);
+				}
+				else if ( i->getType() == BWAPI::UnitTypes::Terran_SCV )
+				{
+					distanceScv += i->getDistance(nullPosition);
+				}
+			}
+		}
+		*/
+
+		//Broodwar->drawTextScreen(5, 26*0, "M - %f", distanceMarines);
     }
     else
     {
@@ -132,7 +171,8 @@ int main(int argc, const char* argv[])
 		  }
       }
     }
-    while(Broodwar->isInGame())
+
+	while(Broodwar->isInGame())
     {
       for(std::list<Event>::const_iterator e = Broodwar->getEvents().begin(); e != Broodwar->getEvents().end(); ++e)
       {
@@ -228,8 +268,6 @@ void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2)
 	if ( units.size()>0 )
 	{
 		Position v1, v2, v3, v4, v5, newPosition, unitVelocity, flagPosition;
-		Position distance1 = units.getPosition() - flag1.getPosition();
-		Position distance2 = units.getPosition() - flag2.getPosition();
 
 		if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Marine )
 		{
@@ -248,11 +286,11 @@ void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2)
 			flagPosition = flagScv;
 		}
 
-		if ( units.getPosition().getDistance(flag1.getPosition()) < 50 )
+		if ( units.getPosition().getDistance(flag1.getPosition()) < 70 )
 		{
 			flagPosition = flag2.getPosition();
 		}
-		else if ( units.getPosition().getDistance(flag2.getPosition()) < 50 )
+		else if ( units.getPosition().getDistance(flag2.getPosition()) < 70 )
 		{
 			flagPosition = flag1.getPosition();
 		}
@@ -280,15 +318,46 @@ void boidsPatrolFlag(Unitset units, PositionOrUnit flag1, PositionOrUnit flag2)
 			// Rule 4: Tendency towards a particular place
 			v4 = rule4( i->getPosition(), flagPosition );
 			// Rule 5: Tendency to avoid another units
-			v5 = rule5( (*i) );
+			v5 = rule5( (*i), flagPosition );
 		
 			unitVelocity.x = (int)ceil(i->getVelocityX());
 			unitVelocity.y = (int)ceil(i->getVelocityY());
-			unitVelocity = unitVelocity + ( v1*6 ) + ( v2*1 ) + (v3*1 ) + ( v4*5 ) + ( v5*2 );
+			unitVelocity = ( unitVelocity + ( v1*5 ) + ( v2*1 ) + (v3*2 ) + ( v4*4 ) - ( v5*2 ) ) / 1;
+
+			if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Marine )
+			{
+				Broodwar->drawLineMap(i->getPosition(), i->getPosition()+v1*5, Colors::Yellow);
+				//Broodwar->drawLineMap(i->getPosition(), i->getPosition()+v2, Colors::Red);
+				Broodwar->drawLineMap(i->getPosition(), i->getPosition()+v3*2, Colors::Blue);
+				Broodwar->drawLineMap(i->getPosition(), i->getPosition()+v4*4, Colors::Purple);
+				//Broodwar->drawLineMap(i->getPosition(), i->getPosition()+v5*2, Colors::Orange);
+				Broodwar->drawLineMap(i->getPosition(), i->getPosition()+unitVelocity, Colors::Green);
+			}
+
+			int limitVelocity = 100;
+			if ( unitVelocity.x > limitVelocity )
+			{
+				unitVelocity.x = limitVelocity;
+			}
+			else if ( unitVelocity.x < -limitVelocity )
+			{
+				unitVelocity.x = -limitVelocity;
+			}
+			if ( unitVelocity.y > limitVelocity )
+			{
+				unitVelocity.y = limitVelocity;
+			}
+			else if ( unitVelocity.y < -limitVelocity )
+			{
+				unitVelocity.y = -limitVelocity;
+			}
 			newPosition = i->getPosition() + unitVelocity;
-		
-			i->rightClick(newPosition);
-			Broodwar->drawDotMap(newPosition.x, newPosition.y, Colors::Blue);
+			if ( !i->isStuck() )
+			{
+				i->rightClick(newPosition);
+				//Broodwar->drawLineMap(i->getPosition(), newPosition, Colors::Green);
+				//Broodwar->drawDotMap(newPosition.x, newPosition.y, Colors::Blue);
+			}
 		}
 
 		if ( units.begin()->getType() == BWAPI::UnitTypes::Terran_Marine )
@@ -327,7 +396,9 @@ Position rule1(Unitset units, int unitID)
 			v1 += ( i->getPosition() / total );
 		}
 	}
+	
 	v1 = ( ( v1 - unitPosition ) / 10 );
+	
 	return v1;
 }
 
@@ -335,6 +406,7 @@ Position rule1(Unitset units, int unitID)
 Position rule2(Unitset units, int unitID)
 {
 	Position v2 = 0;
+	/*
 	Position unitPosition = 0;
 
 	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
@@ -348,13 +420,27 @@ Position rule2(Unitset units, int unitID)
 	{
 		if ( unitID != i->getID() )
 		{ 
-			if ( i->getPosition().getDistance(unitPosition) < 40 )
+			if ( i->getPosition().getDistance(unitPosition) < 50 )
 			{
 				v2 -= ( i->getPosition() - unitPosition );
 			}
 		}
 	}
-
+	*/
+	Unitset allUnits = NULL;
+	for ( Unitset::iterator i = units.begin(); i != units.end(); ++i )
+	{
+		if ( unitID == i->getID() )
+		{
+			allUnits = i->getUnitsInRadius(50, BWAPI::Filter::IsOwned);
+			for ( Unitset::iterator j = allUnits.begin(); j != allUnits.end(); ++j )
+			{
+				v2 -= ( j->getPosition() - i->getPosition() );
+			}
+			break;
+		}
+	}
+	
 	return v2;
 }
 
@@ -377,7 +463,8 @@ Position rule3(Unitset units, int unitID)
 			v3.y += ( (int)ceil( i->getVelocityY() ) / total );
 		}
 	}
-	v3 = ( ( v3 - unitVelocity ) / 8 );
+	v3 = ( ( v3 - unitVelocity ) );
+	
 	return v3;
 }
 
@@ -385,27 +472,33 @@ Position rule3(Unitset units, int unitID)
 Position rule4(Position unitPosition, Position place)
 {
 	Position v4 = 0;
-	v4 = ( ( place - unitPosition ) / 10 );
+	v4 = place - unitPosition;
+	if ( ( v4.x < -10 && v4.y < -10 ) || ( v4.x > 10 && v4.y > 10 ) )
+	{
+		v4 = v4 / 10;
+	}
+	
 	return v4;
 }
 
 // Rule 5: Tendency to avoid another units
-Position rule5(Unit unit1)
+Position rule5(Unit unit1, Position place)
 {
 	Position v5 = 0;
 	Position unitPosition = unit1->getPosition();
 	Position unitDistance = 0;
 	Position totalDistance = 0;
+	int total = 0;
+	Unitset avoidUnits;
 
-	Unitset avoidUnits = unit1->getUnitsInRadius(140, !BWAPI::Filter::IsPowerup && BWAPI::Filter::IsOwned);
+	avoidUnits = unit1->getUnitsInRadius(120, !BWAPI::Filter::IsPowerup && BWAPI::Filter::IsOwned && BWAPI::Filter::GetType != unit1->getType());
+	total = avoidUnits.size();
 	for ( Unitset::iterator i = avoidUnits.begin(); i != avoidUnits.end(); ++i )
 	{
-		if ( unit1->getType() != i->getType() )
-		{
-			totalDistance += ( unitPosition - i->getPosition() );
-		}
+		totalDistance += ( ( i->getPosition() - unitPosition ) / total );
 	}
-	v5.x = ( ( totalDistance.y ) / 10 );
-	v5.y = ( ( totalDistance.x ) / 10 );
+	v5.x = totalDistance.y;
+	v5.y = totalDistance.x;
+	//v5 = totalDistance;
 	return v5;
 }
