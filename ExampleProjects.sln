@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BoidsMoveAIClient", "BoidsM
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleMoveAIClient", "SimpleMoveAIClient\SimpleMoveAIClient.vcxproj", "{3B0AF191-DA57-4AED-B9C5-629D97BF2516}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BoidsMoveAIClient", "BoidsAIClient\BoidsAIClient.vcxproj", "{9EB7356E-8049-4473-8566-ACC38F943C0D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -42,6 +44,10 @@ Global
 		{3B0AF191-DA57-4AED-B9C5-629D97BF2516}.Debug|Win32.Build.0 = Debug|Win32
 		{3B0AF191-DA57-4AED-B9C5-629D97BF2516}.Release|Win32.ActiveCfg = Release|Win32
 		{3B0AF191-DA57-4AED-B9C5-629D97BF2516}.Release|Win32.Build.0 = Release|Win32
+		{9EB7356E-8049-4473-8566-ACC38F943C0D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9EB7356E-8049-4473-8566-ACC38F943C0D}.Debug|Win32.Build.0 = Debug|Win32
+		{9EB7356E-8049-4473-8566-ACC38F943C0D}.Release|Win32.ActiveCfg = Release|Win32
+		{9EB7356E-8049-4473-8566-ACC38F943C0D}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
